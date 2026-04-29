@@ -108,6 +108,7 @@ body {
 }
 
 /* ══════════ SIDEBAR ══════════ */
+<<<<<<< HEAD
 .img-logo-max{
 
   height: 50px;
@@ -127,6 +128,8 @@ body {
 
   margin: 0px;
 }
+=======
+>>>>>>> f4f5d92441db06a6800e5c551c4afa4dd99bc1c0
 .sidebar {
   width: 256px; min-width: 256px;
   background: var(--bg-sidebar);
@@ -140,9 +143,13 @@ body {
 }
 
 .sidebar-logo {
+<<<<<<< HEAD
   padding-top:24px;
   padding-left: 20px;
   padding-right: 20px;
+=======
+  padding: 24px 20px 18px;
+>>>>>>> f4f5d92441db06a6800e5c551c4afa4dd99bc1c0
   border-bottom: 1px solid var(--border);
 }
 
@@ -329,6 +336,7 @@ body {
 
 .kpi-icon {
   width: 36px; height: 36px; border-radius: 10px;
+<<<<<<< HEAD
   background: transparent;  /* Убираем прозрачный фон */
   margin-bottom: 14px; 
   display: flex; 
@@ -345,6 +353,19 @@ body {
 }
 
 
+=======
+  background: var(--kpi-color, var(--primary));
+  opacity: 0.12;
+  margin-bottom: 14px; display: flex; align-items: center; justify-content: center;
+}
+.kpi-icon-inner {
+  position: absolute;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--kpi-color, var(--primary));
+}
+
+>>>>>>> f4f5d92441db06a6800e5c551c4afa4dd99bc1c0
 .kpi-value {
   font-family: 'Lexend', sans-serif;
   font-size: 28px; font-weight: 800; line-height: 1;
@@ -398,6 +419,7 @@ body {
 }
 .filter-select:focus { border-color: var(--primary); }
 option { background: #fff; }
+<<<<<<< HEAD
 .filter-name{
   display: flex;
   gap: 30px;
@@ -406,6 +428,8 @@ option { background: #fff; }
 }
 
 
+=======
+>>>>>>> f4f5d92441db06a6800e5c551c4afa4dd99bc1c0
 
 /* ── FILTER CHIPS ── */
 .filter-chips-wrap {
