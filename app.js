@@ -12,6 +12,158 @@ const charts = {};
 const csvBuf = { ref: null, perf: null, assess: null };
 
 /* ══════════════════════════════════
+   SKELETON SYSTEM (ТЗ 6.6)
+══════════════════════════════════ */
+
+/** Инжектируем CSS скелетонов один раз при старте */
+function injectSkeletonCSS() {
+  if (document.getElementById('skeleton-css')) return;
+  const style = document.createElement('style');
+  style.id = 'skeleton-css';
+  style.textContent = `
+    @keyframes skel-pulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: .45; }
+    }
+    .skel {
+      background: linear-gradient(90deg, #e8edf4 25%, #d1dae8 50%, #e8edf4 75%);
+      background-size: 200% 100%;
+      animation: skel-shimmer 1.4s ease-in-out infinite, skel-pulse 1.4s ease-in-out infinite;
+      border-radius: 6px;
+    }
+    @keyframes skel-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .skel-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .skel-kpi-card {
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      padding: 20px 18px;
+      background: #fff;
+    }
+    .skel-table-row {
+      display: flex;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      align-items: center;
+    }
+    .skel-chart-box {
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      padding: 20px;
+      background: #fff;
+      margin-bottom: 16px;
+    }
+    /* Тёмная тема */
+    @media (prefers-color-scheme: dark) {
+      .skel { background: linear-gradient(90deg,#1e293b 25%,#263045 50%,#1e293b 75%); background-size:200% 100%; }
+      .skel-kpi-card, .skel-chart-box { background:#111827; border-color:#1e293b; }
+      .skel-table-row { border-color:#1e293b; }
+    }
+    [data-theme="dark"] .skel { background: linear-gradient(90deg,#1e293b 25%,#263045 50%,#1e293b 75%); background-size:200% 100%; }
+    [data-theme="dark"] .skel-kpi-card, [data-theme="dark"] .skel-chart-box { background:#111827; border-color:#1e293b; }
+    [data-theme="dark"] .skel-table-row { border-color:#1e293b; }
+  `;
+  document.head.appendChild(style);
+}
+
+/** 4 KPI-карточки-скелетона */
+function skelKpiGrid() {
+  return `<div class="skel-kpi-grid">${Array(4).fill(0).map(() => `
+    <div class="skel-kpi-card">
+      <div class="skel" style="width:32px;height:32px;border-radius:8px;margin-bottom:14px"></div>
+      <div class="skel" style="width:60%;height:22px;margin-bottom:8px"></div>
+      <div class="skel" style="width:45%;height:13px"></div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/** N строк таблицы-скелетона */
+function skelTableRows(n = 6, cols = [120,80,80,100,60,60]) {
+  return Array(n).fill(0).map(() =>
+    `<div class="skel-table-row">${cols.map(w =>
+      `<div class="skel" style="width:${w}px;height:14px;flex-shrink:0"></div>`
+    ).join('')}</div>`
+  ).join('');
+}
+
+/** Скелетон блока с графиком */
+function skelChart(height = 220) {
+  return `<div class="skel-chart-box">
+    <div class="skel" style="width:140px;height:14px;margin-bottom:16px"></div>
+    <div class="skel" style="width:100%;height:${height}px;border-radius:10px"></div>
+  </div>`;
+}
+
+/** Скелетон профиля судьи */
+function skelRefProfile() {
+  return `
+    <div style="padding:24px 28px">
+      <!-- hero -->
+      <div style="display:flex;align-items:center;gap:16px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px 24px;margin-bottom:20px">
+        <div class="skel" style="width:64px;height:64px;border-radius:50%;flex-shrink:0"></div>
+        <div style="flex:1">
+          <div class="skel" style="width:220px;height:20px;margin-bottom:10px"></div>
+          <div class="skel" style="width:160px;height:13px"></div>
+        </div>
+        <div style="display:flex;gap:24px">
+          ${Array(3).fill(0).map(() => `
+            <div style="text-align:center">
+              <div class="skel" style="width:64px;height:64px;border-radius:50%;margin-bottom:6px"></div>
+              <div class="skel" style="width:56px;height:12px;margin:0 auto"></div>
+            </div>`).join('')}
+        </div>
+      </div>
+      ${skelKpiGrid()}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        ${skelChart(200)}
+        ${skelChart(200)}
+      </div>
+      ${skelChart(140)}
+      <div style="border:1px solid #e2e8f0;border-radius:14px;overflow:hidden">
+        ${skelTableRows(7, [130,70,80,90,60,120,60,60,80])}
+      </div>
+    </div>`;
+}
+
+/** Скелетон страницы соревнований */
+function skelCompsPage() {
+  return `
+    <div style="padding:24px 28px">
+      ${skelKpiGrid()}
+      <div style="border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;background:#fff">
+        ${skelTableRows(6, [200,80,70,60,120,120,70])}
+      </div>
+    </div>`;
+}
+
+/** Скелетон списка судей */
+function skelRefsPage() {
+  return `
+    <div style="padding:24px 28px">
+      <div style="border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;background:#fff">
+        ${skelTableRows(8, [180,140,60,120,120,80])}
+      </div>
+    </div>`;
+}
+
+/** Показать скелетон в элементе на время выполнения fn() */
+async function withSkeleton(containerId, skelHtml, fn) {
+  const el = document.getElementById(containerId);
+  if (el) el.innerHTML = skelHtml;
+  // минимальная задержка чтобы скелетон успел отрисоваться
+  await new Promise(r => setTimeout(r, 30));
+  await fn();
+}
+
+/* ══════════════════════════════════
    NAVIGATION
 ══════════════════════════════════ */
 function nav(page) {
@@ -155,6 +307,7 @@ function renderComps() {
     ${kpiCard('Выступлений', DB.performances.length, '#10B981', iconStar())}
     ${kpiCard('Точность исполнения', execAll.length ? pct(100 * execOk.length / execAll.length) : '—', '#F59E0B', iconTarget())}
   `;
+  kpiEl.dataset.loaded = '1';
 
   if (!comps.length) {
     tbody.innerHTML = `<tr><td colspan="7" class="tbl-empty">
@@ -441,11 +594,24 @@ function openRefProfile(refId) {
   rpRef = r;
   rpTabMode = 'exec';
 
-  document.getElementById('rp-name').textContent = r.fio;
-  document.getElementById('rp-sub').textContent  = [r.region, r.city].filter(Boolean).join(' · ');
-  document.getElementById('rp-hero-name').textContent = r.fio;
-  document.getElementById('rp-hero-meta').textContent = [r.region, r.city].filter(Boolean).join(', ') || '—';
-  document.getElementById('rp-avatar').textContent = initials(r.fio);
+  // Показываем скелетон профиля сразу при переходе
+  nav('ref-profile');
+  const mainContent = document.querySelector('#page-ref-profile .page-content, #page-ref-profile .content, #page-ref-profile main, #page-ref-profile');
+  const skEl = document.getElementById('rp-skeleton');
+  if (skEl) {
+    skEl.innerHTML = skelRefProfile();
+    skEl.style.display = 'block';
+  }
+
+  // Даём браузеру отрисовать скелетон, затем заполняем данные
+  requestAnimationFrame(() => setTimeout(() => {
+    if (skEl) skEl.style.display = 'none';
+
+    document.getElementById('rp-name').textContent = r.fio;
+    document.getElementById('rp-sub').textContent  = [r.region, r.city].filter(Boolean).join(' · ');
+    document.getElementById('rp-hero-name').textContent = r.fio;
+    document.getElementById('rp-hero-meta').textContent = [r.region, r.city].filter(Boolean).join(', ') || '—';
+    document.getElementById('rp-avatar').textContent = initials(r.fio);
 
   // Gauges
   const execOk = (r.exec_bullseye || 0) + (r.exec_ok || 0);
@@ -532,8 +698,8 @@ function openRefProfile(refId) {
   fillSelect('rp-filter-age',  [...new Set(pa.map(a => a.age_category))]);
   fillSelect('rp-filter-comp', [...new Set(pa.map(a => a.competition))]);
 
-  renderProfilePerfs();
-  nav('ref-profile');
+    renderProfilePerfs();
+  }, 80)); // конец setTimeout скелетона профиля
 }
 
 function fillSelect(id, vals) {
@@ -547,7 +713,14 @@ function fillSelect(id, vals) {
 function rpTab(mode) {
   rpTabMode = mode;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === mode));
-  renderProfilePerfs();
+  // Скелетон таблицы на время переключения вкладки
+  const tbody = document.getElementById('rp-tbody');
+  if (tbody) {
+    tbody.closest('table') 
+      ? (tbody.innerHTML = skelTableRows(5, [130,70,80,90,60,120,60,60,80]).replace(/<div /g,'<tr><td colspan="9" style="padding:0"><div ').replace(/<\/div><\/div>/g,'</div></td></tr>'))
+      : null;
+  }
+  setTimeout(() => renderProfilePerfs(), 60);
 }
 
 function renderProfilePerfs() {
@@ -576,7 +749,11 @@ function renderProfilePerfs() {
                                             'rgba(239,68,68,0.15)';
     const tc  = a.accuracy === 'bullseye' ? '#065F46' :
                 a.accuracy === 'ok'       ? '#B45309' : '#991B1B';
-    return `<tr>
+
+    // Красная строка если серьёзное отклонение
+    const rowStyle = getBiasRowStyle(a.deviation, a.result_type);
+
+    return `<tr style="${rowStyle}">
       <td style="font-size:12px;font-weight:600">${escHtml(a.competition)}</td>
       <td><span class="badge b-blue">${escHtml(a.discipline)}</span></td>
       <td style="font-size:12px">${escHtml(a.age_category)}</td>
@@ -591,71 +768,92 @@ function renderProfilePerfs() {
 }
 
 /* ══════════════════════════════════
-   KPI CARD HELPER
+   KPI ICONS
 ══════════════════════════════════ */
-
-
-/* ── Icons ── */
-/* ── Яркие иконки с градиентами ── */
-function iconTrophy() { 
+function iconTrophy() {
   return `<svg width="28" height="28" viewBox="0 0 24 24" style="display:block;">
     <path d="M6 9H4a2 2 0 0 1-2-2V5h4" stroke="#FFD700" stroke-width="3" fill="none"/>
     <path d="M18 9h2a2 2 0 0 0 2-2V5h-4" stroke="#FFD700" stroke-width="3" fill="none"/>
     <path d="M12 17v4" stroke="#FFA500" stroke-width="3" fill="none"/>
     <path d="M8 21h8" stroke="#FFA500" stroke-width="3" fill="none"/>
     <path d="M6 5v4a6 6 0 0 0 12 0V5H6Z" stroke="#FFD700" stroke-width="3" fill="#FFD700"/>
-  </svg>`; 
+  </svg>`;
 }
 
-function iconUser() { 
+function iconUser() {
   return `<svg width="28" height="28" viewBox="0 0 24 24" style="display:block;">
     <circle cx="12" cy="8" r="4" stroke="#00D4FF" stroke-width="3" fill="#00D4FF"/>
     <path d="M4 20c0-3.866 3.582-7 8-7s8 3.134 8 7" stroke="#00D4FF" stroke-width="3" fill="#00D4FF"/>
-  </svg>`; 
+  </svg>`;
 }
 
-function iconStar() { 
+function iconStar() {
   return `<svg width="28" height="28" viewBox="0 0 24 24" style="display:block;">
-    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" 
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
       stroke="#44ff57" stroke-width="2" fill="#44ff57"/>
-  </svg>`; 
+  </svg>`;
 }
 
-function iconTarget() { 
+function iconTarget() {
   return `<svg width="28" height="28" viewBox="0 0 24 24" style="display:block;">
     <circle cx="12" cy="12" r="10" stroke="#ff9d00" stroke-width="3" fill="#ff9d00"/>
     <circle cx="12" cy="12" r="6" stroke="#ffffff" stroke-width="2" fill="none"/>
     <circle cx="12" cy="12" r="2" fill="#ffffff"/>
-  </svg>`; 
+  </svg>`;
 }
 
-function iconChart() { 
+function iconChart() {
   return `<svg width="28" height="28" viewBox="0 0 24 24" style="display:block;">
     <rect x="17" y="9" width="3" height="11" rx="1" fill="#B74CFF"/>
     <rect x="10" y="4" width="3" height="16" rx="1" fill="#D96CFF"/>
     <rect x="3" y="13" width="3" height="7" rx="1" fill="#9B30FF"/>
-  </svg>`; 
+  </svg>`;
 }
 
-function iconCheck() { 
+function iconCheck() {
+  // Минималистичное зелёное яблочко — иконка для «В яблочко (исп.)»
   return `<svg width="28" height="28" viewBox="0 0 24 24" style="display:block;">
-    <circle cx="12" cy="12" r="11" stroke="#ffd500" stroke-width="3" fill="none"/>
-    <path d="M7 12l4 4 7-8" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`; 
+    <path d="M12 3 C12 3 13.5 1 15 1.5" stroke="#10B981" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M8 7 C5 7 3 9.5 3 12.5 C3 16.5 6 21 9 21 C10.2 21 11 20.5 12 20.5 C13 20.5 13.8 21 15 21 C18 21 21 16.5 21 12.5 C21 9.5 19 7 16 7 C14.8 7 13.8 7.6 12 7.6 C10.2 7.6 9.2 7 8 7Z" fill="#10B981" opacity="0.85"/>
+    <path d="M8 7 C5 7 3 9.5 3 12.5 C3 16.5 6 21 9 21 C10.2 21 11 20.5 12 20.5 C13 20.5 13.8 21 15 21 C18 21 21 16.5 21 12.5 C21 9.5 19 7 16 7 C14.8 7 13.8 7.6 12 7.6 C10.2 7.6 9.2 7 8 7Z" stroke="#059669" stroke-width="1.2" fill="none"/>
+    
+  </svg>`;
 }
 
-/* Обновлённая KPI карточка с эффектами для иконок */
+/* ══════════════════════════════════
+   KPI CARD
+══════════════════════════════════ */
 function kpiCard(label, value, color, iconSvg) {
   return `
     <div class="kpi-card" style="--kpi-color:${color}">
-      <div style="margin-bottom:12px;">  <!-- Убрали класс kpi-icon -->
-        ${iconSvg}  <!-- Иконка без обёртки с opacity -->
+      <div style="margin-bottom:12px;">
+        ${iconSvg}
       </div>
       <div class="kpi-value">${value}</div>
       <div class="kpi-label">${label}</div>
     </div>`;
 }
-/* ── Escape HTML ── */
+
+/* ══════════════════════════════════
+   ROW HIGHLIGHT: красная строка
+   при серьёзном отклонении оценки
+══════════════════════════════════ */
+function getBiasRowStyle(deviation, resultScore) {
+  let allowed;
+  if (resultScore >= 8.0)      allowed = 0.3;
+  else if (resultScore >= 7.0) allowed = 0.4;
+  else if (resultScore >= 6.0) allowed = 0.5;
+  else                          allowed = 0.6;
+
+  if (deviation > allowed) {
+    return 'background:rgba(239,68,68,0.10);border-left:3px solid #EF4444;';
+  }
+  return '';
+}
+
+/* ══════════════════════════════════
+   ESCAPE HTML
+══════════════════════════════════ */
 function escHtml(str) {
   if (str == null) return '';
   return String(str)
@@ -680,7 +878,6 @@ function loadCSV(key, input) {
       csvBuf[key] = r.data;
       document.getElementById(stId).innerHTML =
         `<span class="status-ok">✅ Загружено ${r.data.length} строк</span>`;
-      // Mark upload zone
       const uz = document.getElementById('uz-' + key);
       if (uz) {
         uz.style.borderColor = 'var(--green)';
