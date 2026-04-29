@@ -877,7 +877,7 @@ function loadCSV(key, input) {
     complete(r) {
       csvBuf[key] = r.data;
       document.getElementById(stId).innerHTML =
-        `<span class="status-ok">✅ Загружено ${r.data.length} строк</span>`;
+        `<span class="status-ok"><img class="gal" src="images/799images (1) (1).png"> Загружено ${r.data.length} строк</span>`;
       const uz = document.getElementById('uz-' + key);
       if (uz) {
         uz.style.borderColor = 'var(--green)';
