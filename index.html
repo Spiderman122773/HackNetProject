@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Aerobic.Space — Аналитика судейства</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700;800&family=Nunito+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── BACKGROUND DECORATION ── -->
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo1">
+      <img class="img-logo-max" src="/images/Лого.svg">
+      <img class="img-logo-min" src="/images/Лого миниатюра (голубой) (2).svg">
+    </div>
+
+  </div>
+
+  <nav class="nav">
+    <div class="nav-group-label">Аналитика</div>
+    <div class="nav-item active" data-page="competitions" onclick="nav('competitions')">
+      <span class="nav-icon">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      </span>
+      <span class="nav-label">Соревнования</span>
+      <span class="nav-pill" id="nav-comp-count"></span>
+    </div>
+    <div class="nav-item" data-page="referees" onclick="nav('referees')">
+      <span class="nav-icon">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-3.866 3.582-7 8-7s8 3.134 8 7"/></svg>
+      </span>
+      <span class="nav-label">Судьи</span>
+      <span class="nav-pill" id="nav-ref-count"></span>
+    </div>
+    <div class="nav-group-label">Данные</div>
+    <div class="nav-item" data-page="upload" onclick="nav('upload')">
+      <span class="nav-icon">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </span>
+      <span class="nav-label">Загрузка CSV</span>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <svg width="16" height="16" viewBox="0 0 512 512" fill="none">
+      <path d="M118.891 0C118.891 53.737 162.721 97.569 216.789 97.571v.001C162.721 97.575 118.891 141.406 118.891 195.475h-.008C118.883 141.406 75.052 97.575 20.984 97.572v-.001C75.052 97.569 118.883 53.738 118.883 0H118.891Z" fill="#155DFC"/>
+      <path d="M282.939 103.586C283.385 216.125 374.753 307.218 487.397 307.218v.001C374.753 307.219 283.385 398.312 282.939 510.852 282.494 398.313 191.128 307.22 78.484 307.219v-.001C191.128 307.216 282.494 216.125 282.939 103.586Z" fill="#155DFC"/>
+    </svg>
+    <span>Aerobic.Space · 2026</span>
+  </div>
+</aside>
+
+<!-- ══════════ MAIN ══════════ -->
+<main class="main">
+
+<!-- ─ PAGE: Competitions ─────────── -->
+<div class="page active" id="page-competitions">
+  <div class="topbar">
+    <div class="topbar-info">
+      <div class="topbar-title">Соревнования</div>
+      <div class="topbar-sub">Обзор всех соревнований и точность судейства</div>
+    </div>
+    <div class="topbar-right">
+      <div class="data-status-dot" id="data-status-dot"></div>
+      <span class="data-status-text" id="data-status-text">Нет данных</span>
+    </div>
+  </div>
+  <div class="content">
+    <!-- Summary KPI row -->
+    <div class="kpi-row" id="comp-kpi"></div>
+
+    <!-- Search -->
+    <div class="search-bar-wrap">
+      <div class="search-bar">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" id="comp-search" type="text" placeholder="Поиск по названию соревнования..." oninput="renderComps()"/>
+      </div>
+      <select class="filter-select" id="comp-type-filter" onchange="renderComps()">
+        <option value="">Все типы</option>
+        <option value="RUSSIA">Всероссийские</option>
+        <option value="REGION">Региональные</option>
+      </select>
+    </div>
+
+    <!-- Competitions table -->
+    <div class="glass-card">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Соревнование</th>
+              <th>Тип</th>
+              <th>Выступлений</th>
+              <th>Судей</th>
+              <th>Исполнение (допуст.)</th>
+              <th>Артистизм (допуст.)</th>
+              <th>Ср. откл.</th>
+            </tr>
+          </thead>
+          <tbody id="comp-tbody">
+            <tr><td colspan="7" class="tbl-empty">
+              <div class="empty-state">
+                <div class="empty-icon">📊</div>
+                <div>Данные не загружены</div>
+                <a class="empty-link" href="#" onclick="nav('upload')">Загрузить CSV-файлы →</a>
+              </div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─ PAGE: Competition Detail ────── -->
+<div class="page" id="page-comp-detail">
+  <div class="topbar">
+    <button class="btn-back" onclick="nav('competitions')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Назад
+    </button>
+    <div class="topbar-info">
+      <div class="topbar-title" id="cd-title">—</div>
+      <div class="topbar-sub" id="cd-sub">—</div>
+    </div>
+  </div>
+  <div class="content">
+    <!-- KPI row -->
+    <div class="kpi-row" id="cd-kpi"></div>
+
+    <!-- Filters row -->
+    <div class="filter-chips-wrap">
+      <div class="filter-chips-group">
+        <div class="filter-chips-label">Дисциплина</div>
+        <div class="chips" id="cd-disc-chips"></div>
+      </div>
+      <div class="filter-chips-group">
+        <div class="filter-chips-label">Возраст</div>
+        <div class="chips" id="cd-age-chips"></div>
+      </div>
+    </div>
+
+    <!-- Categories table -->
+    <div class="glass-card">
+      <div class="card-header">
+        <span class="card-title">Категории выступлений</span>
+        <span class="card-badge" id="cd-cat-count"></span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Возраст / Дисциплина</th>
+              <th>Выступлений</th>
+              <th>Исполнение — В яблочко</th>
+              <th>Исполнение — Допустимо</th>
+              <th>Исполнение — Серьёзное</th>
+              <th>Артистизм — Допустимо</th>
+              <th>Коэф. девиации</th>
+              <th>Тепловая карта</th>
+            </tr>
+          </thead>
+          <tbody id="cd-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─ PAGE: Category / Heatmap ────── -->
+<div class="page" id="page-cat">
+  <div class="topbar">
+    <button class="btn-back" onclick="nav('comp-detail')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Назад
+    </button>
+    <div class="topbar-info">
+      <div class="topbar-title" id="cat-title">—</div>
+      <div class="topbar-sub" id="cat-sub">—</div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="glass-card">
+        <div class="card-header"><span class="card-title">Тепловая карта: Судья × Регион</span></div>
+        <div class="hm-wrap" id="cat-heatmap"></div>
+      </div>
+      <div class="glass-card">
+        <div class="card-header"><span class="card-title">Средние оценки по судьям</span></div>
+        <div class="chart-box" style="height:280px"><canvas id="cat-bar-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="glass-card">
+      <div class="card-header"><span class="card-title">Детализация оценок</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Судья</th><th>Регион</th><th>Тип</th><th>Ср. оценка</th><th>Ср. откл.</th><th>В яблочко</th><th>Допустимо</th><th>Серьёзное</th></tr>
+          </thead>
+          <tbody id="cat-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─ PAGE: Referees ─────────────── -->
+<div class="page" id="page-referees">
+  <div class="topbar">
+    <div class="topbar-info">
+      <div class="topbar-title">Судьи</div>
+      <div class="topbar-sub">Список всех судей и их показатели</div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="search-bar-wrap">
+      <div class="search-bar">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" id="ref-search" type="text" placeholder="Поиск по ФИО или региону..." oninput="renderRefs()"/>
+      </div>
+      <select class="filter-select" id="ref-sort" onchange="renderRefs()">
+        <option value="fio">По имени</option>
+        <option value="exec_bad">По отклонениям (исп.)</option>
+        <option value="art_bad">По отклонениям (арт.)</option>
+        <option value="bias">По предвзятости</option>
+        <option value="total">По кол-ву оценок</option>
+      </select>
+    </div>
+    <div class="glass-card">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Судья</th>
+              <th>Регион / Город</th>
+              <th>Оценок всего</th>
+              <th>Исп. — точность</th>
+              <th>Арт. — точность</th>
+              <th>Предвзятость</th>
+            </tr>
+          </thead>
+          <tbody id="ref-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─ PAGE: Referee Profile ─────── -->
+<div class="page" id="page-ref-profile">
+  <div class="topbar">
+    <button class="btn-back" onclick="nav('referees')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Назад
+    </button>
+    <div class="topbar-info">
+      <div class="topbar-title" id="rp-name">—</div>
+      <div class="topbar-sub" id="rp-sub">—</div>
+    </div>
+  </div>
+  <div class="content">
+    <!-- Profile hero -->
+    <div class="profile-hero glass-card" id="rp-hero">
+      <div class="profile-avatar" id="rp-avatar"></div>
+      <div class="profile-info">
+        <div class="profile-name" id="rp-hero-name">—</div>
+        <div class="profile-meta" id="rp-hero-meta">—</div>
+      </div>
+      <div class="profile-gauges" id="rp-gauges"></div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="kpi-row" id="rp-stats"></div>
+
+    <!-- Charts row -->
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="glass-card">
+        <div class="card-header"><span class="card-title">Точность оценок</span></div>
+        <div class="chart-box" style="height:220px"><canvas id="rp-acc-chart"></canvas></div>
+      </div>
+      <div class="glass-card">
+        <div class="card-header"><span class="card-title">Предвзятость — свои vs чужие регионы</span></div>
+        <div class="bias-detail" id="rp-bias-detail"></div>
+      </div>
+    </div>
+
+    <!-- Tabs + Filters -->
+    <div class="tabs">
+      <button class="tab active" data-tab="exec" onclick="rpTab('exec')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Исполнение
+      </button>
+      <button class="tab" data-tab="art" onclick="rpTab('art')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>
+        Артистизм
+      </button>
+    </div>
+    <div class="filter-name">
+      <p>дисциплина</p>
+      <p>возвраст</p>
+      <p>Соревнование</p>
+
+    </div>
+    <div class="filter-row">
+      <select class="filter-select" id="rp-filter-disc" onchange="renderProfilePerfs()"><option value="">Все дисциплины</option></select>
+      <select class="filter-select" id="rp-filter-age" onchange="renderProfilePerfs()"><option value="">Все возрасты</option></select>
+      <select class="filter-select" id="rp-filter-comp" onchange="renderProfilePerfs()"><option value="">Все соревнования</option></select>
+    </div>
+
+    <div class="glass-card">
+      <div class="card-header">
+        <span class="card-title">Список выступлений</span>
+        <span class="card-badge" id="rp-perf-count"></span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Соревнование</th>
+              <th>Дисциплина</th>
+              <th>Возраст</th>
+              <th>Регион</th>
+              <th>Оценка судьи</th>
+              <th>Остальные</th>
+              <th>Итог по кат.</th>
+              <th>Отклонение</th>
+              <th>Точность</th>
+            </tr>
+          </thead>
+          <tbody id="rp-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─ PAGE: Upload ───────────────── -->
+<div class="page" id="page-upload">
+  <div class="topbar">
+    <div class="topbar-info">
+      <div class="topbar-title">Загрузка данных</div>
+      <div class="topbar-sub">Обновите данные из CSV-файлов</div>
+    </div>
+  </div>
+  <div class="content" style="max-width:620px">
+    <div class="info-banner">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      Порядок загрузки: сначала Судьи → затем Выступления → затем Оценки. После загрузки всех трёх файлов нажмите «Пересчитать».
+    </div>
+
+    <div class="upload-step glass-card">
+      <div class="upload-step-num">1</div>
+      <div class="upload-step-body">
+        <div class="upload-step-title">Судьи <span class="upload-file-name">referee.csv</span></div>
+        <div class="upload-step-fields">id · fio · region · city</div>
+        <div class="upload-zone" id="uz-ref" onclick="document.getElementById('uf-ref').click()">
+          <input type="file" id="uf-ref" accept=".csv" onchange="loadCSV('ref',this)"/>
+          <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>Перетащите файл или нажмите для выбора</span>
+        </div>
+        <div class="upload-status" id="st-ref"></div>
+      </div>
+    </div>
+
+    <div class="upload-step glass-card">
+      <div class="upload-step-num">2</div>
+      <div class="upload-step-body">
+        <div class="upload-step-title">Выступления <span class="upload-file-name">performances.csv</span></div>
+        <div class="upload-step-fields">id · region · city · competition_type · competition · age_category · discipline</div>
+        <div class="upload-zone" id="uz-perf" onclick="document.getElementById('uf-perf').click()">
+          <input type="file" id="uf-perf" accept=".csv" onchange="loadCSV('perf',this)"/>
+          <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>Перетащите файл или нажмите для выбора</span>
+        </div>
+        <div class="upload-status" id="st-perf"></div>
+      </div>
+    </div>
+
+    <div class="upload-step glass-card">
+      <div class="upload-step-num">3</div>
+      <div class="upload-step-body">
+        <div class="upload-step-title">Оценки <span class="upload-file-name">assessments.csv</span></div>
+        <div class="upload-step-fields">id · referee_id · performance_id · type · number · referee_assessment · result_type_assessment · result_assessment</div>
+        <div class="upload-zone" id="uz-assess" onclick="document.getElementById('uf-assess').click()">
+          <input type="file" id="uf-assess" accept=".csv" onchange="loadCSV('assess',this)"/>
+          <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>Перетащите файл или нажмите для выбора</span>
+        </div>
+        <div class="upload-status" id="st-assess"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <button class="btn-primary" onclick="rebuildFromCSV()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Пересчитать аналитику
+      </button>
+      <div class="upload-status" id="st-rebuild"></div>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner">
+    <div class="spinner-ring"></div>
+    <div class="spinner-ring spinner-ring-2"></div>
+    <div class="loading-text">Загрузка данных...</div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
