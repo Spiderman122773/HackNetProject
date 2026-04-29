@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Aerobic.Space — Аналитика судейства</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@400;600;700;800&display=swap');
+:root{
+  /* Brand colors from Aerobic.Space identity */
+  --brand-blue:#48A3FE;
+  --brand-dark:#006FDF;
+  --brand-red:#FE484B;
+  /* UI */
+  --bg:#060D1A;
+  --bg2:#0C1526;
+  --bg3:#111E33;
+  --bg4:#172540;
+  --border:#1E3050;
+  --border2:#243860;
+  --text:#E8F0FE;
+  --text2:#8BA3C7;
+  --text3:#4A6490;
+  --green:#22C55E;
+  --yellow:#F59E0B;
+  --red:#EF4444;
+  --radius:14px;
+  --r-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--brand-blue)}
+
+/* ─── LAYOUT ──────────────────────── */
+.layout{display:flex;min-height:100vh}
+
+/* ─── SIDEBAR ─────────────────────── */
+.sidebar{
+  width:248px;min-width:248px;
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;overflow-y:auto;z-index:20
+}
+.sidebar-logo{
+  padding:22px 20px 18px;
+  border-bottom:1px solid var(--border);
+}
+.logo-svg-wrap{margin-bottom:10px}
+.logo-tagline{font-size:11px;color:var(--text3);letter-spacing:.05em;text-transform:uppercase}
+
+.nav{padding:10px 10px;flex:1}
+.nav-group-title{
+  font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text3);padding:14px 10px 6px
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:var(--r-sm);
+  cursor:pointer;color:var(--text2);font-size:13.5px;
+  font-weight:500;transition:all .15s;margin-bottom:2px;
+  position:relative
+}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{
+  background:linear-gradient(90deg,rgba(72,163,254,.15),rgba(72,163,254,.05));
+  color:var(--brand-blue);font-weight:600;
+  border-left:2px solid var(--brand-blue);padding-left:10px
+}
+.nav-item svg{opacity:.7;flex-shrink:0}
+.nav-item.active svg{opacity:1}
+
+.sidebar-footer{
+  padding:16px 20px;border-top:1px solid var(--border);
+  font-size:11px;color:var(--text3)
+}
+
+/* ─── MAIN ────────────────────────── */
+.main{flex:1;overflow-y:auto;background:var(--bg)}
+
+/* ─── TOPBAR ──────────────────────── */
+.topbar{
+  background:rgba(6,13,26,.85);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:14px 28px;display:flex;align-items:center;gap:14px;
+  position:sticky;top:0;z-index:10
+}
+.topbar-title{font-family:'Onest',sans-serif;font-size:18px;font-weight:700}
+.topbar-sub{font-size:12px;color:var(--text3);margin-top:1px}
+.topbar-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* ─── CONTENT ─────────────────────── */
+.content{padding:24px 28px}
+.page{display:none}
+.page.active{display:block;animation:fadeIn .18s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ─── GRID ────────────────────────── */
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+
+/* ─── CARD ────────────────────────── */
+.card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px
+}
+.card-hd{
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:14px;display:flex;align-items:center;gap:8px
+}
+.card-hd-line{flex:1;height:1px;background:var(--border)}
+
+/* ─── STAT CARD ───────────────────── */
+.stat-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:18px 20px;
+  position:relative;overflow:hidden
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--accent-color, var(--brand-blue));opacity:.6
+}
+.stat-label{font-size:11.5px;color:var(--text3);margin-bottom:6px;font-weight:500}
+.stat-val{font-family:'Onest',sans-serif;font-size:28px;font-weight:800;line-height:1;
+  font-variant-numeric:tabular-nums;color:var(--accent-color,var(--brand-blue))}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:5px}
+
+/* ─── INPUTS ──────────────────────── */
+.search-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.inp{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  padding:9px 14px;border-radius:var(--r-sm);font-size:13.5px;outline:none;
+  transition:border-color .15s;font-family:inherit
+}
+.inp:focus{border-color:var(--brand-blue)}
+.inp-search{flex:1;min-width:200px}
+option{background:var(--bg3)}
+
+/* ─── TABLE ───────────────────────── */
+.tbl-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead tr{background:var(--bg3)}
+th{
+  padding:11px 14px;text-align:left;font-weight:600;
+  font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text3);white-space:nowrap;border-bottom:1px solid var(--border)
+}
+td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr{cursor:pointer;transition:background .1s}
+tbody tr:hover{background:rgba(72,163,254,.05)}
+.no-hover tbody tr{cursor:default}
+.no-hover tbody tr:hover{background:none}
+
+/* ─── BADGES ──────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.b-blue{background:rgba(72,163,254,.15);color:#93c5fd}
+.b-indigo{background:rgba(99,102,241,.15);color:#a5b4fc}
+.b-green{background:rgba(34,197,94,.12);color:#86efac}
+.b-yellow{background:rgba(245,158,11,.12);color:#fde68a}
+.b-red{background:rgba(239,68,68,.12);color:#fca5a5}
+.b-gray{background:var(--bg3);color:var(--text3)}
+
+/* ─── ACCURACY BAR ────────────────── */
+.acc-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;min-width:70px;gap:1px}
+.acc-bar .g{height:100%;background:var(--green)}
+.acc-bar .y{height:100%;background:var(--yellow)}
+.acc-bar .r{height:100%;background:var(--red)}
+.acc-pct{font-size:11.5px;color:var(--text2);margin-top:3px;font-variant-numeric:tabular-nums}
+
+/* ─── CHARTS ──────────────────────── */
+.chart-box{position:relative}
+.chart-box canvas{max-width:100%}
+
+/* ─── TABS ────────────────────────── */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{
+  padding:10px 20px;font-size:13.5px;font-weight:500;cursor:pointer;
+  color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s
+}
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--brand-blue);border-bottom-color:var(--brand-blue);font-weight:600}
+
+/* ─── CHIPS ───────────────────────── */
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;
+  background:var(--bg3);border:1px solid var(--border);color:var(--text2);transition:all .15s
+}
+.chip:hover{border-color:var(--brand-blue);color:var(--brand-blue)}
+.chip.on{background:rgba(72,163,254,.15);border-color:var(--brand-blue);color:var(--brand-blue)}
+
+/* ─── BTN ─────────────────────────── */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 18px;border-radius:var(--r-sm);
+  font-size:13.5px;font-weight:600;cursor:pointer;
+  transition:all .15s;border:none;outline:none;font-family:inherit
+}
+.btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg4);color:var(--text)}
+.btn-primary{background:var(--brand-blue);color:#fff}
+.btn-primary:hover{background:#2e8fe8}
+
+/* ─── HEATMAP ─────────────────────── */
+.hm-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.hm-table{border-collapse:collapse;font-size:11.5px;white-space:nowrap}
+.hm-table th,.hm-table td{padding:7px 10px;border:1px solid var(--border)}
+.hm-table th{background:var(--bg3);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.04em;text-align:center}
+.hm-table td.hm-name{text-align:left;max-width:160px;overflow:hidden;text-overflow:ellipsis;font-weight:500;font-size:12px;min-width:140px}
+.hm-cell{border-radius:4px;padding:4px 8px;font-weight:600;font-size:11.5px;text-align:center;display:block}
+
+/* ─── SCORE ROWS ──────────────────── */
+.score-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:50px;padding:4px 10px;border-radius:6px;
+  font-family:'Onest',sans-serif;font-weight:700;font-size:14px
+}
+.other-scores{display:flex;gap:4px;flex-wrap:wrap}
+.os{padding:3px 7px;background:var(--bg3);border-radius:4px;font-size:11.5px;color:var(--text2);font-variant-numeric:tabular-nums}
+
+/* ─── UPLOAD ──────────────────────── */
+.upload-zone{
+  border:2px dashed var(--border2);border-radius:var(--radius);
+  padding:28px 20px;text-align:center;cursor:pointer;
+  transition:all .2s;background:var(--bg3)
+}
+.upload-zone:hover{border-color:var(--brand-blue);background:rgba(72,163,254,.05)}
+.upload-zone.drag{border-color:var(--brand-blue);background:rgba(72,163,254,.08)}
+.upload-zone input{display:none}
+
+/* ─── BIAS VISUAL ─────────────────── */
+.bias-meter{height:8px;border-radius:4px;background:var(--bg4);position:relative;margin:10px 0}
+.bias-center-line{position:absolute;left:50%;top:-3px;width:2px;height:14px;background:var(--border2);border-radius:1px}
+.bias-fill{position:absolute;height:8px;top:0;border-radius:4px;transition:all .4s}
+
+/* ─── SEPARATOR ───────────────────── */
+.sep{height:1px;background:var(--border);margin:20px 0}
+
+/* ─── RESPONSIVE ──────────────────── */
+@media(max-width:960px){
+  .g4{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr}
+}
+@media(max-width:700px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%;height:auto;position:relative}
+  .nav{display:flex;flex-wrap:wrap;gap:4px;padding:8px}
+  .nav-group-title{display:none}
+  .nav-item{padding:7px 10px;font-size:12px}
+  .content{padding:16px}
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .topbar{padding:12px 16px}
+}
+
+/* ─── SPARKLE DECORATION ──────────────────── */
+.sparkle{display:inline-block;opacity:.5}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <!-- Aerobic.Space logo (scaled down) -->
+    <div class="logo-svg-wrap">
+      <svg width="160" height="64" viewBox="0 0 384 153" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M-0.001875 70L22.1581 14H33.6781L55.6781 70H41.9181L31.3581 41.6C30.9315 40.48 30.5048 39.28 30.0781 38C29.6515 36.72 29.2248 35.4133 28.7981 34.08C28.3715 32.6933 27.9448 31.36 27.5181 30.08C27.1448 28.7467 26.8248 27.52 26.5581 26.4L28.9581 26.32C28.6381 27.6533 28.2648 28.96 27.8381 30.24C27.4648 31.52 27.0648 32.8 26.6381 34.08C26.2648 35.3067 25.8381 36.56 25.3581 37.84C24.8781 39.0667 24.4248 40.3467 23.9981 41.68L13.4381 70H-0.001875ZM10.5581 59.28L14.7981 49.04H40.5581L44.7181 59.28H10.5581ZM62.665 70V14H101.705V25.6H75.865V58.4H102.505V70H62.665ZM69.065 47.04V36H98.105V47.04H69.065ZM114.228 70V14H139.428C143.001 14 146.228 14.7733 149.108 16.32C152.041 17.8667 154.334 20 155.988 22.72C157.641 25.3867 158.468 28.4267 158.468 31.84C158.468 35.36 157.641 38.5333 155.988 41.36C154.334 44.1333 152.068 46.32 149.188 47.92C146.308 49.52 143.054 50.32 139.428 50.32H127.188V70H114.228ZM145.268 70L131.028 44.72L144.948 42.72L160.788 70H145.268ZM127.188 39.92H138.228C139.614 39.92 140.814 39.6267 141.828 39.04C142.894 38.4 143.694 37.52 144.228 36.4C144.814 35.28 145.108 34 145.108 32.56C145.108 31.12 144.788 29.8667 144.148 28.8C143.508 27.68 142.574 26.8267 141.348 26.24C140.174 25.6533 138.734 25.36 137.028 25.36H127.188V39.92ZM195.138 70.8C190.871 70.8 186.978 70.08 183.458 68.64C179.938 67.2 176.871 65.1733 174.258 62.56C171.645 59.9467 169.618 56.88 168.178 53.36C166.738 49.84 166.018 45.9733 166.018 41.76C166.018 37.5467 166.738 33.68 168.178 30.16C169.618 26.64 171.645 23.5733 174.258 20.96C176.871 18.3467 179.938 16.32 183.458 14.88C186.978 13.44 190.845 12.72 195.058 12.72C199.271 12.72 203.138 13.44 206.658 14.88C210.178 16.32 213.245 18.3467 215.858 20.96C218.471 23.5733 220.471 26.64 221.858 30.16C223.298 33.68 224.018 37.5467 224.018 41.76C224.018 45.92 223.298 49.7867 221.858 53.36C220.471 56.88 218.471 59.9467 215.858 62.56C213.245 65.1733 210.178 67.2 206.658 68.64C203.138 70.08 199.298 70.8 195.138 70.8ZM195.058 58C197.245 58 199.245 57.6 201.058 56.8C202.925 56 204.525 54.88 205.858 53.44C207.245 51.9467 208.311 50.2133 209.058 48.24C209.805 46.2667 210.178 44.1067 210.178 41.76C210.178 39.4133 209.805 37.2533 209.058 35.28C208.311 33.3067 207.245 31.6 205.858 30.16C204.525 28.6667 202.925 27.52 201.058 26.72C199.245 25.92 197.245 25.52 195.058 25.52C192.871 25.52 190.845 25.92 188.978 26.72C187.165 27.52 185.565 28.6667 184.178 30.16C182.791 31.6 181.725 33.3067 180.978 35.28C180.285 37.2533 179.938 39.4133 179.938 41.76C179.938 44.1067 180.285 46.2933 180.978 48.32C181.725 50.2933 182.791 52 184.178 53.44C185.565 54.88 187.165 56 188.978 56.8C190.845 57.6 192.871 58 195.058 58Z" fill="#48A3FE"/>
+        <path d="M306.078 83C306.078 99.5685 317.271 113 331.078 113C317.271 113 306.078 126.431 306.078 143C306.078 126.431 294.885 113 281.078 113C294.885 113 306.078 99.5685 306.078 83Z" fill="#48A3FE" fill-opacity="0.5"/>
+      </svg>
+    </div>
+    <div class="logo-tagline">Аналитика судейства</div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-group-title">Аналитика</div>
+    <div class="nav-item active" data-page="competitions" onclick="nav('competitions')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      Соревнования
+    </div>
+    <div class="nav-item" data-page="referees" onclick="nav('referees')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-3.866 3.582-7 8-7s8 3.134 8 7"/></svg>
+      Судьи
+    </div>
+    <div class="nav-group-title">Данные</div>
+    <div class="nav-item" data-page="upload" onclick="nav('upload')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Загрузка CSV
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;gap:8px">
+      <svg width="14" height="14" viewBox="0 0 512 512" fill="none"><path d="M118.891 0C118.891 53.737 162.721 97.569 216.789 97.571v.001C162.721 97.575 118.891 141.406 118.891 195.475h-.008C118.883 141.406 75.052 97.575 20.984 97.572v-.001C75.052 97.569 118.883 53.738 118.883 0H118.891Z" fill="#48A3FE"/><path d="M282.939 103.586C283.385 216.125 374.753 307.218 487.397 307.218v.001C374.753 307.219 283.385 398.312 282.939 510.852 282.494 398.313 191.128 307.22 78.484 307.219v-.001C191.128 307.216 282.494 216.125 282.939 103.586Z" fill="#48A3FE"/></svg>
+      <span>Aerobic.Space · 2026</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════ MAIN ══════════ -->
+<main class="main">
+
+<!-- ─ PAGE: Competitions ─────────── -->
+<div class="page active" id="page-competitions">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Соревнования</div>
+      <div class="topbar-sub">Статистика по всем соревнованиям</div>
+    </div>
+    <div class="topbar-right" id="comp-summary-badges"></div>
+  </div>
+  <div class="content">
+    <div class="grid g4" style="margin-bottom:20px" id="comp-global-stats"></div>
+    <div class="card">
+      <div class="card-hd">Список соревнований <div class="card-hd-line"></div></div>
+      <div class="search-row">
+        <input class="inp inp-search" id="comp-search" placeholder="🔍 Поиск по названию..." oninput="renderComps()"/>
+      </div>
+      <div class="tbl-wrap" style="border:none">
+        <table id="comp-table">
+          <thead><tr>
+            <th>Наименование соревнования</th>
+            <th>Тип</th>
+            <th>Кол-во выступлений</th>
+            <th>Судей</th>
+            <th>Ср. оценка исп.</th>
+            <th>Ср. оценка арт.</th>
+            <th>% попадания (исп.)</th>
+            <th>% попадания (арт.)</th>
+          </tr></thead>
+          <tbody id="comp-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─ PAGE: Competition Detail ────── -->
+<div class="page" id="page-comp-detail">
+  <div class="topbar">
+    <button class="btn btn-ghost" onclick="nav('competitions')" style="padding:7px 12px">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Назад
+    </button>
+    <div>
+      <div class="topbar-title" id="cd-title">—</div>
+      <div class="topbar-sub" id="cd-sub">—</div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="grid g4" style="margin-bottom:20px" id="cd-stats"></div>
+    <div class="grid g2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-hd">Точность — Исполнение <div class="card-hd-line"></div></div>
+        <div class="chart-box" style="height:220px"><canvas id="cd-exec-chart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-hd">Точность — Артистизм <div class="card-hd-line"></div></div>
+        <div class="chart-box" style="height:220px"><canvas id="cd-art-chart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Filters card -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-hd">Фильтры <div class="card-hd-line"></div></div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:7px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Дисциплина</div>
+          <div class="chips" id="cd-disc-chips"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:7px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Возрастная категория</div>
+          <div class="chips" id="cd-age-chips"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Breakdown by discipline+age (template sheet 2) -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-hd">Статистика по категориям <div class="card-hd-line"></div></div>
+      <div class="tbl-wrap" style="border:none">
+        <table>
+          <thead><tr>
+            <th>Дисциплина</th>
+            <th>Возрастная категория</th>
+            <th>Кол-во выступлений</th>
+            <th>% попадания исп. И1</th>
+            <th>% попадания исп. И2</th>
+            <th>% попадания исп. И3</th>
+            <th>% попадания исп. И4</th>
+            <th>% попадания арт. И1</th>
+            <th>% попадания арт. И2</th>
+            <th>% попадания арт. И3</th>
+            <th>% попадания арт. И4</th>
+          </tr></thead>
+          <tbody id="cd-breakdown-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Avg scores per referee -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-hd">Средние оценки судей <div class="card-hd-line"></div></div>
+      <div class="chart-box" style="height:300px"><canvas id="cd-ref-chart"></canvas></div>
+    </div>
+
+    <!-- Heatmap: judge × region (template sheet 3) -->
+    <div class="card">
+      <div class="card-hd">
+        Тепловая карта: Судья × Регион&nbsp;
+        <span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">(среднее отклонение оценки)</span>
+        <div class="card-hd-line"></div>
+      </div>
+      <div class="hm-wrap" id="cd-heatmap"></div>
+      <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)"><span style="width:12px;height:12px;border-radius:3px;background:rgba(34,197,94,.2);display:block"></span>Точно (≤0.15)</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)"><span style="width:12px;height:12px;border-radius:3px;background:rgba(245,158,11,.2);display:block"></span>Допустимо (≤0.4)</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)"><span style="width:12px;height:12px;border-radius:3px;background:rgba(239,68,68,.18);display:block"></span>Высокое (>0.4)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─ PAGE: Referees ─────────────── -->
+<div class="page" id="page-referees">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Список судей</div>
+      <div class="topbar-sub" id="ref-count-sub">—</div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="search-row">
+      <input class="inp inp-search" id="ref-search" placeholder="🔍 Поиск по ФИО..." oninput="renderRefs()"/>
+      <select class="inp" id="ref-type-filter" onchange="renderRefs()">
+        <option value="">Все типы</option>
+        <option value="exec">Исполнение</option>
+        <option value="art">Артистизм</option>
+      </select>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>ФИО</th><th>Регион</th><th>Город</th><th>Оценок</th>
+          <th>Средняя оценка исп.</th><th>Средняя оценка арт.</th>
+          <th>% попадания исп.</th><th>% попадания арт.</th>
+          <th>Предвзятость</th>
+        </tr></thead>
+        <tbody id="ref-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─ PAGE: Referee Profile ─────── -->
+<div class="page" id="page-ref-profile">
+  <div class="topbar">
+    <button class="btn btn-ghost" onclick="nav('referees')" style="padding:7px 12px">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Назад
+    </button>
+    <div>
+      <div class="topbar-title" id="rp-name">—</div>
+      <div class="topbar-sub" id="rp-sub">—</div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="grid g4" style="margin-bottom:20px" id="rp-stats"></div>
+    <div class="grid g2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-hd">Точность оценок <div class="card-hd-line"></div></div>
+        <div class="chart-box" style="height:200px"><canvas id="rp-acc-chart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-hd">Индикатор предвзятости <div class="card-hd-line"></div></div>
+        <div id="rp-bias-detail"></div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="exec" onclick="rpTab('exec')">Исполнение</div>
+      <div class="tab" data-tab="art" onclick="rpTab('art')">Артистизм</div>
+    </div>
+
+    <!-- Filters -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <select class="inp" id="rp-filter-disc" onchange="renderProfilePerfs()"><option value="">Все дисциплины</option></select>
+      <select class="inp" id="rp-filter-age"  onchange="renderProfilePerfs()"><option value="">Все возрасты</option></select>
+      <select class="inp" id="rp-filter-comp" onchange="renderProfilePerfs()"><option value="">Все соревнования</option></select>
+    </div>
+
+    <!-- Performances table (template sheet 4) -->
+    <div class="tbl-wrap">
+      <table class="no-hover">
+        <thead><tr>
+          <th>ID</th><th>Соревнование</th><th>Дисциплина</th>
+          <th>Возрастная кат.</th><th>Регион</th>
+          <th>Оценка судьи</th><th>Остальные оценки</th>
+          <th>Итог по кат.</th><th>Отклонение</th><th>Точность</th>
+        </tr></thead>
+        <tbody id="rp-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─ PAGE: Upload ───────────────── -->
+<div class="page" id="page-upload">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Загрузка данных</div>
+      <div class="topbar-sub">Обновите данные из CSV-файлов</div>
+    </div>
+  </div>
+  <div class="content" style="max-width:580px">
+    <div style="background:rgba(72,163,254,.07);border:1px solid rgba(72,163,254,.2);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;font-size:13px;color:var(--text2)">
+      📌 Данные уже загружены из комплекта кейса. Загружайте новые файлы только если получили обновлённые данные.
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-hd">1. Судьи <div class="card-hd-line"></div></div>
+      <div class="upload-zone" onclick="document.getElementById('uf-ref').click()">
+        <input type="file" id="uf-ref" accept=".csv" onchange="loadCSV('ref',this)"/>
+        <div style="font-size:28px;margin-bottom:8px">📋</div>
+        <div style="font-size:14px;color:var(--text2)">referee.csv</div>
+        <div style="font-size:11.5px;color:var(--text3);margin-top:3px">id · fio · region · city</div>
+      </div>
+      <div id="st-ref" style="margin-top:8px;font-size:12.5px"></div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-hd">2. Выступления <div class="card-hd-line"></div></div>
+      <div class="upload-zone" onclick="document.getElementById('uf-perf').click()">
+        <input type="file" id="uf-perf" accept=".csv" onchange="loadCSV('perf',this)"/>
+        <div style="font-size:28px;margin-bottom:8px">🏟️</div>
+        <div style="font-size:14px;color:var(--text2)">performances.csv</div>
+        <div style="font-size:11.5px;color:var(--text3);margin-top:3px">id · region · city · competition_type · competition · age_category · discipline</div>
+      </div>
+      <div id="st-perf" style="margin-top:8px;font-size:12.5px"></div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-hd">3. Оценки <div class="card-hd-line"></div></div>
+      <div class="upload-zone" onclick="document.getElementById('uf-assess').click()">
+        <input type="file" id="uf-assess" accept=".csv" onchange="loadCSV('assess',this)"/>
+        <div style="font-size:28px;margin-bottom:8px">📊</div>
+        <div style="font-size:14px;color:var(--text2)">assessments.csv</div>
+        <div style="font-size:11.5px;color:var(--text3);margin-top:3px">id · referee_id · performance_id · type · number · referee_assessment · result_type_assessment · result_assessment</div>
+      </div>
+      <div id="st-assess" style="margin-top:8px;font-size:12.5px"></div>
+    </div>
+    <button class="btn btn-primary" onclick="rebuildFromCSV()">🔄 Пересчитать аналитику</button>
+    <div id="st-rebuild" style="margin-top:12px;font-size:13px"></div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- ════════════ SCRIPT ════════════ -->
+<script>
+/* ─── State ─────────────────────── */
+let DB = null;
+let cdComp = null, cdDisc = null, cdAge = null;
+let rpRef = null, rpTabMode = 'exec';
+const charts = {};
+const csvBuf = {ref:null, perf:null, assess:null};
+
+/* ─── Navigation ─────────────────── */
+function nav(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  const ni = document.querySelector(`.nav-item[data-page="${p}"]`);
+  if(ni) ni.classList.add('active');
+}
+
+/* ─── Formatters ─────────────────── */
+const pct  = v => v==null ? '—' : v.toFixed(1)+'%';
+const num  = (v,d=3) => (v==null||isNaN(v)) ? '—' : (+v).toFixed(d);
+const fn   = v => v==null ? '—' : (+v).toFixed(2);
+
+function accBar(ok, bad){
+  const okW = ok||0, badW = bad||0, rest = Math.max(0,100-okW-badW);
+  return `<div class="acc-bar"><div class="g" style="width:${okW}%"></div><div class="r" style="width:${badW}%"></div><div style="height:100%;width:${rest}%;background:var(--bg4)"></div></div>
+  <div class="acc-pct">${pct(okW)}</div>`;
+}
+
+function accBadge(a){
+  if(a==='bullseye') return `<span class="badge b-green">В яблочко</span>`;
+  if(a==='ok')       return `<span class="badge b-yellow">Допустимо</span>`;
+  return `<span class="badge b-red">Серьёзное</span>`;
+}
+
+function biasBadge(b){
+  if(b==null) return `<span class="badge b-gray">нет данных</span>`;
+  if(Math.abs(b)<0.03) return `<span class="badge b-green">${num(b,4)}</span>`;
+  if(b>0)  return `<span class="badge b-yellow">+${num(b,4)} ▲</span>`;
+  return `<span class="badge b-red">${num(b,4)} ▼</span>`;
+}
+
+/* ─── Chart helpers ─────────────── */
+function dc(id){ if(charts[id]){charts[id].destroy();delete charts[id];} }
+
+function donut(id, bs, ok, bad){
+  dc(id);
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  charts[id] = new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:['В яблочко','Допустимо','Серьёзное'],
+      datasets:[{data:[bs||0,ok||0,bad||0],backgroundColor:['#22c55e','#f59e0b','#ef4444'],borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
+      plugins:{legend:{position:'bottom',labels:{color:'#8BA3C7',font:{size:11.5},boxWidth:11,padding:12}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed.toFixed(1)}%`}}}}
+  });
+}
+
+function barH(id, labels, eData, aData){
+  dc(id);
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  charts[id] = new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Исполнение',data:eData,backgroundColor:'rgba(72,163,254,.75)',borderRadius:4,borderSkipped:false},
+      {label:'Артистизм', data:aData, backgroundColor:'rgba(0,111,223,.6)',borderRadius:4,borderSkipped:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8BA3C7',font:{size:12}}}},
+      scales:{
+        x:{ticks:{color:'#4A6490',font:{size:10.5},maxRotation:40},grid:{color:'rgba(255,255,255,.03)'}},
+        y:{ticks:{color:'#4A6490',font:{size:10.5}},grid:{color:'rgba(255,255,255,.05)'},min:0}
+      }}
+  });
+}
+
+/* ─── Global stats ─────────────── */
+function globalStats(){
+  if(!DB) return;
+  const all = DB.assessments;
+  const refs = DB.referees;
+  const perfs = DB.performances;
+  const exOk = all.filter(a=>a.type==='EXECUTION'&&a.accuracy!=='bad');
+  const arOk = all.filter(a=>a.type==='ARTISTIC'&&a.accuracy!=='bad');
+  const exAll = all.filter(a=>a.type==='EXECUTION');
+  const arAll = all.filter(a=>a.type==='ARTISTIC');
+
+  document.getElementById('comp-global-stats').innerHTML = `
+    <div class="stat-card" style="--accent-color:var(--brand-blue)">
+      <div class="stat-label">Соревнований</div>
+      <div class="stat-val">${DB.competitions.length}</div>
+    </div>
+    <div class="stat-card" style="--accent-color:#22c55e">
+      <div class="stat-label">% попадания исполнение</div>
+      <div class="stat-val">${exAll.length?pct(100*exOk.length/exAll.length):'—'}</div>
+      <div class="stat-sub">${exAll.length} оценок</div>
+    </div>
+    <div class="stat-card" style="--accent-color:#f59e0b">
+      <div class="stat-label">% попадания артистизм</div>
+      <div class="stat-val">${arAll.length?pct(100*arOk.length/arAll.length):'—'}</div>
+      <div class="stat-sub">${arAll.length} оценок</div>
+    </div>
+    <div class="stat-card" style="--accent-color:var(--brand-blue)">
+      <div class="stat-label">Судей в базе</div>
+      <div class="stat-val">${refs.length}</div>
+    </div>`;
+}
+
+/* ─── Competitions list ─────────── */
+function renderComps(){
+  if(!DB) return;
+  globalStats();
+  const q = document.getElementById('comp-search').value.toLowerCase();
+  const filtered = DB.competitions.filter(c=>!q||c.competition.toLowerCase().includes(q));
+  
+  // Avg scores
+  const avgScore = (type, comp) => {
+    const d = DB.assessments.filter(a=>a.competition===comp&&a.type===type);
+    return d.length ? d.reduce((s,a)=>s+a.score,0)/d.length : null;
+  };
+
+  document.getElementById('comp-tbody').innerHTML = filtered.map(c=>`
+    <tr onclick="openComp('${c.competition.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">
+      <td><strong>${c.competition}</strong></td>
+      <td><span class="badge ${c.competition_type==='RUSSIA'?'b-blue':'b-indigo'}">${c.competition_type}</span></td>
+      <td>${c.perf_count}</td>
+      <td>${c.ref_count}</td>
+      <td style="font-variant-numeric:tabular-nums">${fn(avgScore('EXECUTION',c.competition))}</td>
+      <td style="font-variant-numeric:tabular-nums">${fn(avgScore('ARTISTIC',c.competition))}</td>
+      <td>${accBar(c.exec_ok_pct, 100-c.exec_ok_pct)}</td>
+      <td>${accBar(c.art_ok_pct, 100-(c.art_ok_pct||0))}</td>
+    </tr>`).join('');
+}
+
+/* ─── Competition detail ──────────── */
+function openComp(name){
+  cdComp = DB.competitions.find(c=>c.competition===name);
+  cdDisc = null; cdAge = null;
+  nav('comp-detail');
+  renderCompDetail();
+}
+
+function renderCompDetail(){
+  const c = cdComp;
+  document.getElementById('cd-title').textContent = c.competition;
+  document.getElementById('cd-sub').textContent = `${c.competition_type} · ${c.perf_count} выступлений · ${c.ref_count} судей`;
+
+  // Stat cards
+  document.getElementById('cd-stats').innerHTML = `
+    <div class="stat-card" style="--accent-color:var(--brand-blue)">
+      <div class="stat-label">Выступлений</div>
+      <div class="stat-val">${c.perf_count}</div>
+    </div>
+    <div class="stat-card" style="--accent-color:#8b5cf6">
+      <div class="stat-label">Судей</div>
+      <div class="stat-val">${c.ref_count}</div>
+    </div>
+    <div class="stat-card" style="--accent-color:#22c55e">
+      <div class="stat-label">% попадания исп.</div>
+      <div class="stat-val">${pct(c.exec_ok_pct)}</div>
+    </div>
+    <div class="stat-card" style="--accent-color:#f59e0b">
+      <div class="stat-label">% попадания арт.</div>
+      <div class="stat-val">${pct(c.art_ok_pct)}</div>
+    </div>`;
+
+  // Donut charts
+  const cd = DB.comp_detail[c.competition]||{};
+  let eb=0,eo=0,ebad=0,ab=0,ao=0,abad=0;
+  for(const disc of Object.keys(cd)) for(const age of Object.keys(cd[disc])){
+    const r=cd[disc][age];
+    if(r.exec){eb+=r.exec.bullseye*r.exec.count/100;eo+=r.exec.ok*r.exec.count/100;ebad+=r.exec.bad*r.exec.count/100;}
+    if(r.art) {ab+=r.art.bullseye*r.art.count/100; ao+=r.art.ok*r.art.count/100; abad+=r.art.bad*r.art.count/100;}
+  }
+  const et=eb+eo+ebad||1, at=ab+ao+abad||1;
+  donut('cd-exec-chart',100*eb/et,100*eo/et,100*ebad/et);
+  donut('cd-art-chart', 100*ab/at,100*ao/at,100*abad/at);
+
+  // Discipline chips
+  const discs=[...new Set(Object.keys(cd))].sort();
+  document.getElementById('cd-disc-chips').innerHTML = discs.map(d=>
+    `<div class="chip ${cdDisc===d?'on':''}" onclick="cdSetDisc('${d}')">${d}</div>`).join('');
+
+  // Age chips
+  const ages=[...new Set(Object.values(cd).flatMap(x=>Object.keys(x)))].sort((a,b)=>{
+    const ord=['11-9 лет','14-12 лет','17-15 лет','18+ лет'];
+    return ord.indexOf(a)-ord.indexOf(b);
+  });
+  document.getElementById('cd-age-chips').innerHTML = ages.map(a=>
+    `<div class="chip ${cdAge===a?'on':''}" onclick="cdSetAge('${a}')">${a}</div>`).join('');
+
+  renderCDBkd();
+  renderCDRefChart();
+  renderHeatmap();
+}
+
+function cdSetDisc(d){cdDisc=cdDisc===d?null:d;renderCompDetail();}
+function cdSetAge(a){cdAge=cdAge===a?null:a;renderCompDetail();}
+
+/* Breakdown by discipline+age with per-judge % */
+function renderCDBkd(){
+  const cd = DB.comp_detail[cdComp.competition]||{};
+  const assess = DB.assessments.filter(a=>a.competition===cdComp.competition);
+  let rows=[];
+  for(const disc of Object.keys(cd)){
+    if(cdDisc&&disc!==cdDisc) continue;
+    for(const age of Object.keys(cd[disc])){
+      if(cdAge&&age!==cdAge) continue;
+      const r=cd[disc][age];
+      // Per-judge accuracy for numbers 1-4
+      const judgeAcc = (type) => {
+        return [1,2,3,4].map(n=>{
+          const jg = assess.filter(a=>a.type===type&&a.discipline===disc&&a.age_category===age&&a.number===n);
+          if(!jg.length) return '—';
+          return pct(100*jg.filter(a=>a.accuracy!=='bad').length/jg.length);
+        });
+      };
+      const ea=judgeAcc('EXECUTION'), aa=judgeAcc('ARTISTIC');
+      const cnt = r.exec?r.exec.count:(r.art?r.art.count:0);
+      rows.push({disc,age,cnt,ea,aa});
+    }
+  }
+  document.getElementById('cd-breakdown-tbody').innerHTML = rows.map(r=>`
+    <tr>
+      <td><span class="badge b-blue">${r.disc}</span></td>
+      <td>${r.age}</td>
+      <td>${r.cnt}</td>
+      ${r.ea.map(v=>`<td style="font-size:12px;text-align:center">${v}</td>`).join('')}
+      ${r.aa.map(v=>`<td style="font-size:12px;text-align:center">${v}</td>`).join('')}
+    </tr>`).join('');
+}
+
+function renderCDRefChart(){
+  const assess = DB.assessments.filter(a=>a.competition===cdComp.competition);
+  const refs = DB.referees;
+  const refMap={};
+  for(const a of assess){
+    if(!refMap[a.referee_id]) refMap[a.referee_id]={e:[],ar:[]};
+    if(a.type==='EXECUTION') refMap[a.referee_id].e.push(a.score);
+    else refMap[a.referee_id].ar.push(a.score);
+  }
+  const labels=[],eV=[],aV=[];
+  for(const [rid,v] of Object.entries(refMap)){
+    const r=refs.find(x=>x.id==rid); if(!r) continue;
+    const s=r.fio.split(' ');
+    labels.push(s[0]+' '+(s[1]?s[1][0]+'.':'')+(s[2]?s[2][0]+'.':''));
+    eV.push(v.e.length?+(v.e.reduce((a,b)=>a+b,0)/v.e.length).toFixed(3):null);
+    aV.push(v.ar.length?+(v.ar.reduce((a,b)=>a+b,0)/v.ar.length).toFixed(3):null);
+  }
+  barH('cd-ref-chart',labels,eV,aV);
+}
+
+function renderHeatmap(){
+  const hm=(DB.heatmap||{})[cdComp.competition];
+  if(!hm){document.getElementById('cd-heatmap').innerHTML='<p style="color:var(--text3);padding:16px 0">Нет данных</p>';return;}
+  const refs=DB.referees;
+  const allRegs=DB.all_regions||[];
+  const presentRegs=new Set();
+  for(const rid of Object.keys(hm)) for(const reg of Object.keys(hm[rid])) presentRegs.add(reg);
+  const regions=allRegs.filter(r=>presentRegs.has(r));
+
+  function hmStyle(v){
+    if(v==null) return `background:var(--bg4);color:var(--text3)`;
+    if(v<=0.15) return `background:rgba(34,197,94,.18);color:#86efac`;
+    if(v<=0.4)  return `background:rgba(245,158,11,.18);color:#fde68a`;
+    return `background:rgba(239,68,68,.18);color:#fca5a5`;
+  }
+
+  let h=`<table class="hm-table"><thead><tr><th>Судья</th>`;
+  for(const reg of regions) h+=`<th title="${reg}">${reg.replace('область','обл.').replace('автономный округ - Югра','АО').replace('Ханты-Мансийский','Х-М').substring(0,14)}</th>`;
+  h+=`</tr></thead><tbody>`;
+  for(const rid of Object.keys(hm)){
+    const r=refs.find(x=>x.id==+rid); if(!r) continue;
+    const sn=r.fio.split(' ').map((w,i)=>i===0?w:w[0]+'.').join(' ');
+    h+=`<tr><td class="hm-name" title="${r.fio}">${sn}</td>`;
+    for(const reg of regions){
+      const v=hm[rid][reg];
+      h+=`<td><span class="hm-cell" style="${hmStyle(v)}">${v!=null?v.toFixed(2):'·'}</span></td>`;
+    }
+    h+=`</tr>`;
+  }
+  h+=`</tbody></table>`;
+  document.getElementById('cd-heatmap').innerHTML=h;
+}
+
+/* ─── Referees list ─────────────── */
+function renderRefs(){
+  if(!DB) return;
+  const q=(document.getElementById('ref-search').value||'').toLowerCase();
+  const tf=document.getElementById('ref-type-filter').value;
+  let refs=DB.referees.filter(r=>{
+    if(q&&!r.fio.toLowerCase().includes(q)) return false;
+    if(tf==='exec'&&r.exec_total===0) return false;
+    if(tf==='art'&&r.art_total===0) return false;
+    return true;
+  });
+
+  document.getElementById('ref-count-sub').textContent=`${refs.length} судей`;
+
+  // avg scores per ref
+  function avgS(rid,type){
+    const d=DB.assessments.filter(a=>a.referee_id===rid&&a.type===type);
+    return d.length?d.reduce((s,a)=>s+a.score,0)/d.length:null;
+  }
+
+  document.getElementById('ref-tbody').innerHTML=refs.map(r=>`
+    <tr onclick="openRef(${r.id})">
+      <td><strong>${r.fio}</strong></td>
+      <td style="font-size:12px">${r.region}</td>
+      <td style="font-size:12px">${r.city}</td>
+      <td>${r.total}</td>
+      <td style="font-variant-numeric:tabular-nums">${fn(avgS(r.id,'EXECUTION'))}</td>
+      <td style="font-variant-numeric:tabular-nums">${fn(avgS(r.id,'ARTISTIC'))}</td>
+      <td>${accBar(r.exec_bullseye+r.exec_ok,r.exec_bad)}</td>
+      <td>${accBar(r.art_bullseye+r.art_ok,r.art_bad)}</td>
+      <td>${biasBadge(r.bias)}</td>
+    </tr>`).join('');
+}
+
+/* ─── Referee profile ────────────── */
+function openRef(id){
+  rpRef=DB.referees.find(r=>r.id===id);
+  rpTabMode='exec';
+  document.querySelectorAll('#page-ref-profile .tab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='exec'));
+  nav('ref-profile');
+  renderProfile();
+}
+
+function rpTab(t){
+  rpTabMode=t;
+  document.querySelectorAll('#page-ref-profile .tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));
+  renderProfilePerfs();
+}
+
+function renderProfile(){
+  const r=rpRef;
+  document.getElementById('rp-name').textContent=r.fio;
+  document.getElementById('rp-sub').textContent=`${r.region} · ${r.city}`;
+
+  const execOk=r.exec_bullseye+r.exec_ok;
+  const artOk=r.art_bullseye+r.art_ok;
+  const avgE=()=>{const d=DB.assessments.filter(a=>a.referee_id===r.id&&a.type==='EXECUTION');return d.length?d.reduce((s,a)=>s+a.score,0)/d.length:null;};
+  const avgA=()=>{const d=DB.assessments.filter(a=>a.referee_id===r.id&&a.type==='ARTISTIC');return d.length?d.reduce((s,a)=>s+a.score,0)/d.length:null;};
+
+  document.getElementById('rp-stats').innerHTML=`
+    <div class="stat-card" style="--accent-color:var(--brand-blue)">
+      <div class="stat-label">Оценок всего</div>
+      <div class="stat-val">${r.total}</div>
+    </div>
+    <div class="stat-card" style="--accent-color:#22c55e">
+      <div class="stat-label">% попадания исп.</div>
+      <div class="stat-val">${pct(execOk)}</div>
+      <div class="stat-sub">Ср. оценка: ${fn(avgE())}</div>
+    </div>
+    <div class="stat-card" style="--accent-color:#f59e0b">
+      <div class="stat-label">% попадания арт.</div>
+      <div class="stat-val">${pct(artOk)}</div>
+      <div class="stat-sub">Ср. оценка: ${fn(avgA())}</div>
+    </div>
+    <div class="stat-card" style="--accent-color:${r.bias==null?'var(--text3)':Math.abs(r.bias)<0.03?'#22c55e':r.bias>0?'#f59e0b':'#ef4444'}">
+      <div class="stat-label">Предвзятость</div>
+      <div class="stat-val">${r.bias!=null?(r.bias>0?'+':'')+num(r.bias,4):'—'}</div>
+      <div class="stat-sub">${r.bias==null?'нет данных':r.bias>0.03?'+ к своему региону':r.bias<-0.03?'+ к чужим':' нейтральный'}</div>
+    </div>`;
+
+  // Accuracy donut
+  donut('rp-acc-chart',
+    (r.exec_bullseye+r.art_bullseye)/2,
+    (r.exec_ok+r.art_ok)/2,
+    (r.exec_bad+r.art_bad)/2
+  );
+
+  // Bias detail
+  const bd=document.getElementById('rp-bias-detail');
+  if(r.bias==null){
+    bd.innerHTML=`<p style="color:var(--text3);font-size:13px;margin-top:8px">Недостаточно данных — судья оценивал только спортсменов своего или чужого региона.</p>`;
+  } else {
+    const sign=r.bias>0.03?'Судья более строг к чужим регионам':r.bias<-0.03?'Судья завышает оценки своему региону':'Нейтральный судья';
+    const pct50=Math.min(Math.abs(r.bias)/0.5*50,50);
+    const fillStyle=r.bias>=0
+      ?`left:50%;width:${pct50}%;background:var(--yellow)`
+      :`left:${50-pct50}%;width:${pct50}%;background:var(--brand-red)`;
+    bd.innerHTML=`
+      <div style="padding-top:4px">
+        <div style="font-family:'Onest',sans-serif;font-size:32px;font-weight:800;color:${r.bias>0.03?'var(--yellow)':r.bias<-0.03?'var(--brand-red)':'var(--green)'}">
+          ${r.bias>0?'+':''}${num(r.bias,4)}
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px;margin-bottom:12px">${sign}</div>
+        <div class="bias-meter">
+          <div class="bias-center-line"></div>
+          <div class="bias-fill" style="${fillStyle}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:14px">
+          <span>К своим ▲</span><span>▼ К чужим</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:var(--bg3);border-radius:8px;padding:10px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Своих регион</div>
+            <div style="font-size:18px;font-weight:700;font-family:'Onest',sans-serif;color:var(--brand-blue)">${num(r.bias_own_mean,4)}</div>
+            <div style="font-size:10px;color:var(--text3)">ср. откл.</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:8px;padding:10px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Чужие регионы</div>
+            <div style="font-size:18px;font-weight:700;font-family:'Onest',sans-serif;color:var(--brand-dark)">${num(r.bias_foreign_mean,4)}</div>
+            <div style="font-size:10px;color:var(--text3)">ср. откл.</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Fill selects
+  const pa=DB.assessments.filter(a=>a.referee_id===r.id);
+  function fillSel(id,vals){
+    const el=document.getElementById(id), cur=el.value;
+    el.innerHTML=`<option value="">Все</option>`+[...new Set(vals)].sort().map(v=>`<option value="${v}">${v}</option>`).join('');
+    el.value=cur;
+  }
+  fillSel('rp-filter-disc',pa.map(a=>a.discipline));
+  fillSel('rp-filter-age', pa.map(a=>a.age_category));
+  fillSel('rp-filter-comp',pa.map(a=>a.competition));
+
+  renderProfilePerfs();
+}
+
+function renderProfilePerfs(){
+  const r=rpRef;
+  const type=rpTabMode==='exec'?'EXECUTION':'ARTISTIC';
+  const discF=document.getElementById('rp-filter-disc').value;
+  const ageF= document.getElementById('rp-filter-age').value;
+  const compF=document.getElementById('rp-filter-comp').value;
+
+  const perfs=DB.assessments.filter(a=>
+    a.referee_id===r.id&&a.type===type&&
+    (!discF||a.discipline===discF)&&
+    (!ageF||a.age_category===ageF)&&
+    (!compF||a.competition===compF)
+  );
+
+  document.getElementById('rp-tbody').innerHTML=perfs.map(a=>{
+    const others=DB.assessments.filter(x=>x.performance_id===a.performance_id&&x.type===a.type&&x.referee_id!==r.id).map(x=>x.score);
+    const col=a.accuracy==='bullseye'?'rgba(34,197,94,.2)':a.accuracy==='ok'?'rgba(245,158,11,.15)':'rgba(239,68,68,.15)';
+    const tc=a.accuracy==='bullseye'?'var(--green)':a.accuracy==='ok'?'var(--yellow)':'var(--red)';
+    return `<tr>
+      <td style="font-size:11px;color:var(--text3)">${a.performance_id}</td>
+      <td style="font-size:12px">${a.competition}</td>
+      <td><span class="badge b-blue">${a.discipline}</span></td>
+      <td style="font-size:12px">${a.age_category}</td>
+      <td style="font-size:11px;color:var(--text2)">${a.perf_region}</td>
+      <td><span class="score-badge" style="background:${col};color:${tc}">${a.score.toFixed(2)}</span></td>
+      <td><div class="other-scores">${others.map(s=>`<span class="os">${s.toFixed(2)}</span>`).join('')}</div></td>
+      <td style="font-variant-numeric:tabular-nums">${a.result_type.toFixed(2)}</td>
+      <td style="color:${tc};font-variant-numeric:tabular-nums;font-weight:600">${a.deviation.toFixed(3)}</td>
+      <td>${accBadge(a.accuracy)}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ─── CSV Upload ─────────────────── */
+function loadCSV(key,input){
+  const file=input.files[0]; if(!file) return;
+  const stId=key==='ref'?'st-ref':key==='perf'?'st-perf':'st-assess';
+  document.getElementById(stId).innerHTML='<span style="color:var(--text3)">⏳ Загрузка...</span>';
+  Papa.parse(file,{header:false,skipEmptyLines:true,dynamicTyping:true,complete(r){
+    csvBuf[key]=r.data;
+    document.getElementById(stId).innerHTML=`<span style="color:var(--green)">✅ ${r.data.length} строк</span>`;
+  },error(e){document.getElementById(stId).innerHTML=`<span style="color:var(--red)">❌ ${e.message}</span>`;}});
+}
+
+function rebuildFromCSV(){
+  const st=document.getElementById('st-rebuild');
+  if(!csvBuf.ref||!csvBuf.perf||!csvBuf.assess){
+    st.innerHTML='<span style="color:var(--red)">⚠️ Загрузите все три файла</span>';return;
+  }
+  st.textContent='⏳ Пересчёт...';
+  try{
+    const refs=csvBuf.ref.map(r=>({id:r[0],fio:r[1],region:r[2],city:r[3]}));
+    const perfs=csvBuf.perf.map(p=>({id:p[0],region:p[1],city:p[2],competition_type:p[3],competition:p[4],age_category:p[5],discipline:p[6]}));
+    const ass=csvBuf.assess.map(a=>({id:a[0],referee_id:a[1],performance_id:a[2],type:a[3],number:a[4],referee_assessment:a[5],result_type_assessment:a[6],result_assessment:a[7]}));
+    DB=buildDB(refs,perfs,ass);
+    renderComps();renderRefs();
+    st.innerHTML='<span style="color:var(--green)">✅ Готово!</span>';
+  }catch(e){st.innerHTML=`<span style="color:var(--red)">❌ ${e.message}</span>`;}
+}
+
+/* ─── Build DB from raw CSV ──────── */
+function allowedDev(s){return s>=8?.3:s>=7?.4:s>=6?.5:.6;}
+function accLbl(dev,s){if(dev===0)return'bullseye';if(dev<=allowedDev(s))return'ok';return'bad';}
+
+function buildDB(refs,perfs,assRows){
+  const refMap=Object.fromEntries(refs.map(r=>[r.id,r]));
+  const perfMap=Object.fromEntries(perfs.map(p=>[p.id,p]));
+  const assessments=assRows.map(a=>{
+    const p=perfMap[a.performance_id]||{};const r=refMap[a.referee_id]||{};
+    const dev=Math.abs(a.referee_assessment-a.result_type_assessment);
+    return{...a,competition:p.competition,competition_type:p.competition_type,
+      discipline:p.discipline,age_category:p.age_category,
+      perf_region:p.region,ref_region:r.region,
+      deviation:+dev.toFixed(4),accuracy:accLbl(dev,a.result_type_assessment),
+      score:a.referee_assessment,result_type:a.result_type_assessment,result_total:a.result_assessment};
+  });
+  const refData=refs.map(r=>{
+    const rg=assessments.filter(a=>a.referee_id===r.id);
+    const own=rg.filter(a=>a.perf_region===r.region),foreign=rg.filter(a=>a.perf_region!==r.region);
+    const bias=(own.length>0&&foreign.length>0)?+(foreign.reduce((s,a)=>s+a.deviation,0)/foreign.length-own.reduce((s,a)=>s+a.deviation,0)/own.length).toFixed(4):null;
+    const eg=rg.filter(a=>a.type==='EXECUTION'),ag=rg.filter(a=>a.type==='ARTISTIC');
+    const ap=(g,l)=>g.length?+(100*g.filter(a=>a.accuracy===l).length/g.length).toFixed(1):0;
+    return{id:r.id,fio:r.fio,region:r.region,city:r.city,total:rg.length,
+      exec_bullseye:ap(eg,'bullseye'),exec_ok:ap(eg,'ok'),exec_bad:ap(eg,'bad'),
+      art_bullseye:ap(ag,'bullseye'),art_ok:ap(ag,'ok'),art_bad:ap(ag,'bad'),
+      exec_total:eg.length,art_total:ag.length,
+      bias,bias_own_mean:own.length?+(own.reduce((s,a)=>s+a.deviation,0)/own.length).toFixed(4):null,
+      bias_foreign_mean:foreign.length?+(foreign.reduce((s,a)=>s+a.deviation,0)/foreign.length).toFixed(4):null};
+  });
+  const compNames=[...new Set(assessments.map(a=>a.competition).filter(Boolean))];
+  const competitions=compNames.map(comp=>{
+    const cg=assessments.filter(a=>a.competition===comp);
+    const eg=cg.filter(a=>a.type==='EXECUTION'),ag=cg.filter(a=>a.type==='ARTISTIC');
+    const okp=g=>g.length?+(100*g.filter(a=>a.accuracy!=='bad').length/g.length).toFixed(1):null;
+    return{competition:comp,competition_type:cg[0]?.competition_type,
+      perf_count:[...new Set(cg.map(a=>a.performance_id))].length,
+      ref_count:[...new Set(cg.map(a=>a.referee_id))].length,
+      exec_ok_pct:okp(eg),art_ok_pct:okp(ag),avg_deviation:+(cg.reduce((s,a)=>s+a.deviation,0)/cg.length).toFixed(4)};
+  });
+  const comp_detail={};
+  for(const comp of compNames){
+    comp_detail[comp]={};
+    const cg=assessments.filter(a=>a.competition===comp);
+    for(const disc of[...new Set(cg.map(a=>a.discipline))]){
+      comp_detail[comp][disc]={};
+      const dg=cg.filter(a=>a.discipline===disc);
+      for(const age of[...new Set(dg.map(a=>a.age_category))]){
+        const ag2=dg.filter(a=>a.age_category===age);
+        const eg2=ag2.filter(a=>a.type==='EXECUTION'),arg=ag2.filter(a=>a.type==='ARTISTIC');
+        const s=g=>g.length?{bullseye:+(100*g.filter(a=>a.accuracy==='bullseye').length/g.length).toFixed(1),ok:+(100*g.filter(a=>a.accuracy==='ok').length/g.length).toFixed(1),bad:+(100*g.filter(a=>a.accuracy==='bad').length/g.length).toFixed(1),avg_dev:+(g.reduce((sum,a)=>sum+a.deviation,0)/g.length).toFixed(4),count:g.length}:null;
+        comp_detail[comp][disc][age]={exec:s(eg2),art:s(arg)};
+      }
+    }
+  }
+  const heatmap={};
+  for(const comp of compNames){
+    heatmap[comp]={};
+    const cg=assessments.filter(a=>a.competition===comp);
+    for(const rid of[...new Set(cg.map(a=>a.referee_id))]){
+      heatmap[comp][rid]={};
+      const rg=cg.filter(a=>a.referee_id===rid);
+      for(const reg of[...new Set(rg.map(a=>a.perf_region))])
+        heatmap[comp][rid][reg]=+(rg.filter(a=>a.perf_region===reg).reduce((s,a)=>s+a.deviation,0)/rg.filter(a=>a.perf_region===reg).length).toFixed(3);
+    }
+  }
+  return{referees:refData,performances:perfs,assessments,competitions,comp_detail,heatmap,all_regions:[...new Set(perfs.map(p=>p.region))].sort()};
+}
+
+/* ─── Boot ───────────────────────── */
+async function boot(){
+  try{
+    const resp=await fetch('bundle.json');
+    if(!resp.ok) throw new Error('bundle.json not found');
+    const raw=await resp.json();
+    const lm={'bullseye':'bullseye','ok':'ok','bad':'bad','В яблочко':'bullseye','Допустимое':'ok','Серьёзное':'bad'};
+    raw.assessments.forEach(a=>{a.accuracy=lm[a.accuracy]||a.accuracy;});
+    DB=raw;
+    renderComps();renderRefs();
+  }catch(e){
+    console.warn('bundle.json not found, ready for CSV upload');
+    document.getElementById('comp-tbody').innerHTML=`
+      <tr><td colspan="8" style="text-align:center;color:var(--text3);padding:40px">
+        Данные не загружены. <a href="#" onclick="nav('upload')" style="color:var(--brand-blue)">Загрузите CSV-файлы</a> в разделе «Загрузка CSV».
+      </td></tr>`;
+  }
+}
+boot();
+</script>
+</body>
+</html>
