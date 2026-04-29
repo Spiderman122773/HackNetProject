@@ -15,7 +15,7 @@
   --neutral:       #BFDBFE;
 
   /* Semantic status */
-  --green:        #10B981;
+  --green:        #0f9166;
   --green-soft:   rgba(16, 185, 129, 0.12);
   --yellow:       #F59E0B;
   --yellow-soft:  rgba(245, 158, 11, 0.12);
@@ -145,7 +145,30 @@ body {
   padding-right: 20px;
   border-bottom: 1px solid var(--border);
 }
+.upload-and-text{
 
+  display: grid;
+
+  grid-template-columns: 5fr 2fr;
+
+  column-gap: 30px;
+
+  align-items:start;
+}
+.upload-text{
+
+  background: var(--primary-soft);
+  border-radius: 10px;
+  padding-top:12px;
+  padding-left: 20px;
+  padding-right: 20px;
+  padding-bottom: 12px;
+
+}
+.gal{
+
+  width: 10px;
+}
 .logo-svg { display: block; width: 148px; height: auto; }
 
 .logo-tagline {
